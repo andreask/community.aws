@@ -114,6 +114,10 @@ def wafv2_snake_dict_to_camel_dict(a):
                 retval[item.replace("Ip", "IP")] = wafv2_snake_dict_to_camel_dict(a.get(item))
             elif "Arn" == item:
                 retval["ARN"] = wafv2_snake_dict_to_camel_dict(a.get(item))
+            elif item.startswith("AwsManagedRules"):
+                # The ManagedRuleGroupConfigs keys (AWSManagedRulesBotControlRuleSet,
+                # AWSManagedRulesATPRuleSet, ...) spell AWS in capitals.
+                retval["AWS" + item[3:]] = wafv2_snake_dict_to_camel_dict(a.get(item))
             else:
                 retval[item] = wafv2_snake_dict_to_camel_dict(a.get(item))
         elif isinstance(a.get(item), list):
@@ -166,11 +170,26 @@ def byte_values_to_strings_before_compare(rules):
     return rules
 
 
+def apply_rate_based_statement_defaults(rules):
+    """
+    Apply default values to rate_based_statement fields to match AWS API behaviour.
+    AWS returns evaluation_window_sec with a default value of 300 even when not specified,
+    so we add it to requested rules to ensure idempotent comparisons.
+    """
+    for idx in range(len(rules)):
+        rate_based_stmt = rules[idx].get("Statement", {}).get("RateBasedStatement")
+        if rate_based_stmt and "EvaluationWindowSec" not in rate_based_stmt:
+            rules[idx]["Statement"]["RateBasedStatement"]["EvaluationWindowSec"] = 300
+
+    return rules
+
+
 def compare_priority_rules(existing_rules, requested_rules, purge_rules, state):
     diff = False
     existing_rules = sorted(existing_rules, key=lambda k: k["Priority"])
     existing_rules = byte_values_to_strings_before_compare(existing_rules)
     requested_rules = sorted(requested_rules, key=lambda k: k["Priority"])
+    requested_rules = apply_rate_based_statement_defaults(requested_rules)
 
     if purge_rules and state == "present":
         merged_rules = requested_rules

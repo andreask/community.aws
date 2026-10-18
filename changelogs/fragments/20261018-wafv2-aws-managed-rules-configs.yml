@@ -1,0 +1,2 @@
+bugfixes:
+  - wafv2_web_acl - keep the ``AWS`` prefix of ``ManagedRuleGroupConfigs`` keys such as ``AWSManagedRulesBotControlRuleSet`` in capitals, which the API requires.
