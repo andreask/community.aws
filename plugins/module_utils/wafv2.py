@@ -114,6 +114,10 @@ def wafv2_snake_dict_to_camel_dict(a):
                 retval[item.replace("Ip", "IP")] = wafv2_snake_dict_to_camel_dict(a.get(item))
             elif "Arn" == item:
                 retval["ARN"] = wafv2_snake_dict_to_camel_dict(a.get(item))
+            elif item.startswith("AwsManagedRules"):
+                # The ManagedRuleGroupConfigs keys (AWSManagedRulesBotControlRuleSet,
+                # AWSManagedRulesATPRuleSet, ...) spell AWS in capitals.
+                retval["AWS" + item[3:]] = wafv2_snake_dict_to_camel_dict(a.get(item))
             else:
                 retval[item] = wafv2_snake_dict_to_camel_dict(a.get(item))
         elif isinstance(a.get(item), list):
